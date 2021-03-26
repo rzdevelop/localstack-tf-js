@@ -1,0 +1,39 @@
+version: "3.7"
+services:
+  backend:
+    build:
+      context: "./backend"
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/usr/src/app
+      - backend_node_modules:/usr/src/app/node_modules
+    ports:
+      - "3000:3000"
+  localstack:
+    image: localstack/localstack-full:0.11.4
+    ports:
+      - 4566:4566
+      - 8080:8080 # webui
+    environment:
+      - SERVICES=s3,iam,sqs,ec2
+      - PORT_WEB_UI=8080
+      - DEBUG=1
+      - START_WEB=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - "./tmp/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+  terraform:
+    image: hashicorp/terraform
+    volumes:
+      - ./tf:/tf
+    entrypoint:
+      [
+        sh,
+        -c,
+        "ls -Ral /tf && echo '---' && cd /tf && terraform init && terraform apply -auto-approve",
+      ]
+    depends_on:
+      - localstack
+volumes:
+  backend_node_modules:
